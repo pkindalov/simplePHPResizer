@@ -10,6 +10,7 @@ class SimplePHPResizer{
     private $autoscale;
     private $autoscale_factor;
     private $quality;
+    private $png_quality;
     private $width;
     private $height;
     private $errorMsg;
@@ -24,6 +25,7 @@ class SimplePHPResizer{
         $this->autoscale = $this->dimension === null ? true : false;
         $this->autoscale_factor = 0.5; //percent
         $this->quality = 100;
+        $this->png_quality_compress_lvl = 0; //from 0 - no compress, to max 9 - most compressed
         $this->width = 0;
         $this->height = 0;
         $this->errorMsg = '';
@@ -43,12 +45,11 @@ class SimplePHPResizer{
                case 'jpg':
                    $this->processJpgFile();
                    break;
-               
                case 'png':
-                   # code...
+                   $this->processPngFile();
                    break;
                default:
-                   # code...
+                   $this->processJpgFile();
                    break;
            }
         }
@@ -79,6 +80,31 @@ class SimplePHPResizer{
         // Output
         imagejpeg($thumb, $this->output_directory . $resultLabel, $this->quality);
 
+    }
+
+    private function processPngFile(){
+        if($this->current_file_name === null || empty($this->current_file_name)){
+            $this->errorMsg = 'Invalid file name';
+            $this->throwError();
+        }
+        $this->setPngHeader();
+        $file = $this->input_directory . $this->current_file_name;
+        list($width, $height) = getimagesize($file);
+        $this->width = $this->getDimWidth();
+        $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
+
+        $this->height = $this->getDimHeight();
+        $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
+        $resultLabel = $this->current_file_name . 'resized' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+        // Load
+        $thumb = imagecreatetruecolor($this->width, $this->height);
+        $source = imagecreatefrompng($file);
+
+        // Resize
+        imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
+
+        // Output
+        imagepng($thumb, $this->output_directory . $resultLabel, $this->png_quality_compress_lvl);
     }
 
     private function getDimWidth(){
@@ -160,19 +186,18 @@ class SimplePHPResizer{
         header('Content-Type: image/jpeg');
     }
     private function setPngHeader(){
-        header('Content-Type: image/jpeg');
+        header('Content-Type: image/png');
     }
 }
 
 
-$resizerExtraLarge = new SimplePHPResizer('input/', 'output/', ' 3464x2309');
-$resizerMedium = new SimplePHPResizer('input/', 'output/', ' 2121x1414');
+// $resizerExtraLarge = new SimplePHPResizer('input/', 'output/', ' 3464x2309');
+// $resizerMedium = new SimplePHPResizer('input/', 'output/', ' 2121x1414');
 $resizerSmall = new SimplePHPResizer('input/', 'output/', '800x533');
 
-$resizerExtraLarge->resizeAll();
-$resizerMedium->resizeAll();
+// $resizerExtraLarge->resizeAll();
+// $resizerMedium->resizeAll();
 $resizerSmall->resizeAll();
-
 
 //  2121x1414p
 // 
