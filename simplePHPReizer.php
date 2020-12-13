@@ -69,7 +69,8 @@ class SimplePHPResizer{
 
         $this->height = $this->getDimHeight();
         $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
-        $resultLabel = $this->current_file_name . 'resized' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+        $onlyName = $this->getFileName($this->current_file_name);
+        $resultLabel = $onlyName . '_resized_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
         // Load
         $thumb = imagecreatetruecolor($this->width, $this->height);
         $source = imagecreatefromjpeg($file);
@@ -95,7 +96,8 @@ class SimplePHPResizer{
 
         $this->height = $this->getDimHeight();
         $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
-        $resultLabel = $this->current_file_name . 'resized' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+        $onlyName = $this->getFileName($this->current_file_name);
+        $resultLabel = $onlyName . '_resized_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
         // Load
         $thumb = imagecreatetruecolor($this->width, $this->height);
         $source = imagecreatefrompng($file);
@@ -172,6 +174,15 @@ class SimplePHPResizer{
         }
         return explode('.', $file)[1];
     }
+
+    private function getFileName($file){
+        if(gettype($file) !== 'string'){
+            $this->errorMsg = 'Name of the file must be a string';
+            $this->throwError();
+        }
+        return explode('.', $file)[0];
+    }
+
     private function checkAvailableFiles(){
         if(count($this->file_names) === 0){
             return false;
