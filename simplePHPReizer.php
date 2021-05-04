@@ -33,27 +33,55 @@ class SimplePHPResizer{
     }
 
     public function resizeAll(){
-        if(!$this->checkAvailableFiles()){
+        try{
+            if(!$this->checkAvailableFiles()){
+                $this->errorMsg = 'No files found in input directory';
+                $this->throwError();
+            }
+
+            foreach ($this->file_names as $file_name) {
+               $this->current_file_name = $file_name;
+               $this->file_extension = $this->getFileExtension($this->current_file_name);
+               switch (mb_strtolower($this->file_extension)) {
+                   case 'jpg':
+                       $this->processJpgFile();
+                       break;
+                   case 'png':
+                       $this->processPngFile();
+                       break;
+                   default:
+                       $this->processJpgFile();
+                       break;
+               }
+            }
+            echo 'Operation finished successfull';
+        } catch(Exception $ex){
+            $this->errorMsg = $ex->getMessage();
+            $this->throwError();
+        }
+
+
+    }
+
+    public function resizeJpgByPercent($percent_num){
+         if(!$this->checkAvailableFiles()){
             $this->errorMsg = 'No files found in input directory';
             $this->throwError();
         }
 
-        foreach ($this->file_names as $file_name) {
+        $percent_num = $percent_num / 100;
+        // echo $percent_num;
+        // exit;
+        $this->autoscale_factor = $percent_num;
+
+          foreach ($this->file_names as $file_name) {
            $this->current_file_name = $file_name;
            $this->file_extension = $this->getFileExtension($this->current_file_name);
-           switch (mb_strtolower($this->file_extension)) {
-               case 'jpg':
-                   $this->processJpgFile();
-                   break;
-               case 'png':
-                   $this->processPngFile();
-                   break;
-               default:
-                   $this->processJpgFile();
-                   break;
-           }
+           if(mb_strtolower($this->getFileExtension($this->current_file_name)) !== 'jpg'){
+                continue;
+            }
+            $this->processJpgFileByScale();
         }
-
     }
 
     private function processJpgFile(){
@@ -119,7 +147,7 @@ class SimplePHPResizer{
         }
 
         if(gettype($this->dimension) !== 'string'){
-            $this->errorMsg('Dimension must be of type string');
+            $this->errorMsg = 'Dimension must be of type string';
             $this->throwError();
         }
 
@@ -189,6 +217,32 @@ class SimplePHPResizer{
         }
         return true;
     }
+
+      private function processJpgFileByScale(){
+        if($this->current_file_name === null || empty($this->current_file_name)){
+            $this->errorMsg = 'Invalid file name';
+            $this->throwError();
+        }
+        $this->setJpgHeader();
+        $file = $this->input_directory . $this->current_file_name;
+        list($width, $height) = getimagesize($file);
+        $this->width = $this->autoscale_factor * $width;
+
+        $this->height =  $this->autoscale_factor * $height;
+        $onlyName = $this->getFileName($this->current_file_name);
+        $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+        // Load
+        $thumb = imagecreatetruecolor($this->width, $this->height);
+        $source = imagecreatefromjpeg($file);
+
+        // Resize
+        imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
+
+        // Output
+        imagejpeg($thumb, $this->output_directory . $resultLabel, $this->quality);
+
+    }
+
     private function throwError(){
         throw new Exception($this->errorMsg);
     }
@@ -202,14 +256,49 @@ class SimplePHPResizer{
 }
 
 
+// $resizerMax = new SimplePHPResizer('input/', 'output/', '6000x4000');
 // $resizerExtraLarge = new SimplePHPResizer('input/', 'output/', ' 3464x2309');
 // $resizerMedium = new SimplePHPResizer('input/', 'output/', ' 2121x1414');
-$resizerSmall = new SimplePHPResizer('input/', 'output/', '800x533');
+// $resizerSmall = new SimplePHPResizer('input/', 'output/', '800x533');
 
 // $resizerExtraLarge->resizeAll();
 // $resizerMedium->resizeAll();
-$resizerSmall->resizeAll();
+// $resizerSmall->resizeAll();
+// $resizerMedium->resizeAll();
+// $resizerMax->resizeAll();
 
+// $largeQuality = 81.64;
+// $resiserXL = new SimplePHPResizer('input/', 'output/');
+// $resiserXL->resizeJpgByPercent($largeQuality);
+
+
+//---------------------------------------------------------------------
+
+// $largeQuality = 64.54;
+// $resizerL = new SimplePHPResizer('input/', 'output/');
+// $resizerL->resizeJpgByPercent($largeQuality);
+
+// $smallQuality = 20;
+// $resizerS = new SimplePHPResizer('input/', 'output/');
+// $resizerS->resizeJpgByPercent($smallQuality);
+$small = new SimplePHPResizer('input/', 'output/', '815x614');
+$small->resizeAll();
+
+$medium = new SimplePHPResizer('input/', 'output/', '1630x1227');
+$medium->resizeAll();
+
+$large = new SimplePHPResizer('input/', 'output/', '2751x2072');
+$large->resizeAll();
+
+$xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832');
+$xLarge->resizeAll();
+
+//------------------------------------------------------------------------
+
+// resizeByPercent()
+// 
+// 
+//0.816 -- 0,8161 -from original size to extra large
 //  2121x1414p
 // 
 // $resizer->printFileNames();
