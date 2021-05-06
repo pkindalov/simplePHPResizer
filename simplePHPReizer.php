@@ -1,6 +1,7 @@
 <?php
 
-class SimplePHPResizer{
+class SimplePHPResizer
+{
     private $input_directory;
     private $output_directory;
     private $file_names;
@@ -15,13 +16,17 @@ class SimplePHPResizer{
     private $height;
     private $errorMsg;
     private $dimension_separator;
-    public function __construct($input_dir = 'input/', $output_dir = 'output/', $dimension = null){
+    private $dpi;
+    private $rotation;
+    public function __construct($input_dir = 'input/', $output_dir = 'output/', $dimension = null, $dpi = 72, $rotation = 0)
+    {
         $this->input_directory = $input_dir;
         $this->output_directory = $output_dir;
         $this->file_names = $this->getFileNames();
         $this->current_file_name = null;
         $this->file_extension = 'jpg';
         $this->dimension = $dimension;
+        $this->dpi = $dpi;
         $this->autoscale = $this->dimension === null ? true : false;
         $this->autoscale_factor = 0.5; //percent
         $this->quality = 100;
@@ -30,41 +35,43 @@ class SimplePHPResizer{
         $this->height = 0;
         $this->errorMsg = '';
         $this->dimension_separator = 'x';
+        $this->rotation = $rotation;
     }
 
-    public function resizeAll(){
-        try{
-            if(!$this->checkAvailableFiles()){
+    public function resizeAll()
+    {
+        try {
+            if (!$this->checkAvailableFiles()) {
                 $this->errorMsg = 'No files found in input directory';
                 $this->throwError();
             }
 
             foreach ($this->file_names as $file_name) {
-               $this->current_file_name = $file_name;
-               $this->file_extension = $this->getFileExtension($this->current_file_name);
-               switch (mb_strtolower($this->file_extension)) {
-                   case 'jpg':
-                       $this->processJpgFile();
-                       break;
-                   case 'png':
-                       $this->processPngFile();
-                       break;
-                   default:
-                       $this->processJpgFile();
-                       break;
-               }
+                $this->current_file_name = $file_name;
+                $this->file_extension = $this->getFileExtension($this->current_file_name);
+                switch (mb_strtolower($this->file_extension)) {
+                    case 'jpg':
+                        $this->processJpgFile();
+                        break;
+                    case 'png':
+                        $this->processPngFile();
+                        break;
+                    default:
+                        $this->processJpgFile();
+                        break;
+                }
             }
-            echo 'Operation finished successfull';
-        } catch(Exception $ex){
+            $this->setTextHeader();
+            echo $this->current_file_name . ' resized successfull' . '<br />';
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
-
-
     }
 
-    public function resizeJpgByPercent($percent_num){
-         if(!$this->checkAvailableFiles()){
+    public function resizeJpgByPercent($percent_num)
+    {
+        if (!$this->checkAvailableFiles()) {
             $this->errorMsg = 'No files found in input directory';
             $this->throwError();
         }
@@ -74,194 +81,277 @@ class SimplePHPResizer{
         // exit;
         $this->autoscale_factor = $percent_num;
 
-          foreach ($this->file_names as $file_name) {
-           $this->current_file_name = $file_name;
-           $this->file_extension = $this->getFileExtension($this->current_file_name);
-           if(mb_strtolower($this->getFileExtension($this->current_file_name)) !== 'jpg'){
+        foreach ($this->file_names as $file_name) {
+            $this->current_file_name = $file_name;
+            $this->file_extension = $this->getFileExtension($this->current_file_name);
+            if (mb_strtolower($this->getFileExtension($this->current_file_name)) !== 'jpg') {
                 continue;
             }
             $this->processJpgFileByScale();
         }
     }
 
-    private function processJpgFile(){
-        try{
-            if($this->current_file_name === null || empty($this->current_file_name)){
+    private function processJpgFile()
+    {
+        try {
+            if ($this->current_file_name === null || empty($this->current_file_name)) {
                 $this->errorMsg = 'Invalid file name';
                 $this->throwError();
             }
             $this->setJpgHeader();
             $file = $this->input_directory . $this->current_file_name;
-            list($width, $height) = getimagesize($file);
+            $exif = exif_read_data($file);
+            $imageSizeInfo = getimagesize($file);
+            switch($exif['Orientation']){
+                case 1:
+                    $width = $imageSizeInfo[0];
+                    $height = $imageSizeInfo[1];
+                break;
+                case 6:
+                    $width = $imageSizeInfo[1];
+                    $height = $imageSizeInfo[0];
+                    break;
+                default:
+                    $width = $imageSizeInfo[0];
+                    $height = $imageSizeInfo[1]; 
+                    break;     
+            }
+            // list($height, $width) = getimagesize($file);
+            //$exif['orientation'] == 6 - vertical image -> height > width
+            //$exif['orientation'] == 1 - horizontal image -> height > width
+            // $imageSizeInfo = getimagesize($file);
+            // $width = $imageSizeInfo[0];
+            // $height = $imageSizeInfo[1];
+            
+            // echo '<pre>';
+            //     // print_r(getimagesize($file));
+            //     print_r($exif['Orientation']);
+            // echo '</pre>';    
+            // echo 'height: ' . $height . '<br />';
+            // echo 'width: ' . $width . '<br />';
+            // exit;
+
             $this->width = $this->getDimWidth();
             $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
-    
+            
             $this->height = $this->getDimHeight();
             $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
+
+            //check if the photo is vertical(heigth > width)
+            if($height > $width){
+                $onlyName = $this->getFileName($this->current_file_name);
+                $tmp = $this->height;
+                $this->height = $this->width;
+                $this->width = $tmp;
+                $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+                $thumb = imagecreatetruecolor($this->width, $this->height);
+                $source = imagecreatefromjpeg($file);
+                $source = imagerotate($source, $this->rotation, 0);
+                // Resize
+                imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
+
+                // Output
+                imagejpeg($thumb, $this->output_directory . $resultLabel, $this->quality);
+                return;
+            }
+            
             $onlyName = $this->getFileName($this->current_file_name);
             $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
             // Load
             $thumb = imagecreatetruecolor($this->width, $this->height);
             $source = imagecreatefromjpeg($file);
-    
+            $source = imagerotate($source, $this->rotation, 0);
             // Resize
             imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
-    
+
             // Output
             imagejpeg($thumb, $this->output_directory . $resultLabel, $this->quality);
-        } catch(Exception $ex) {
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
-
     }
 
-    private function processPngFile(){
-        try{
-            if($this->current_file_name === null || empty($this->current_file_name)){
+    private function processPngFile()
+    {
+        try {
+            if ($this->current_file_name === null || empty($this->current_file_name)) {
                 $this->errorMsg = 'Invalid file name';
                 $this->throwError();
-            }
-            $this->setPngHeader();
+            }         
+            // $this->setPngHeader();
             $file = $this->input_directory . $this->current_file_name;
             list($width, $height) = getimagesize($file);
+            // echo 'width: ' . $width . '<br />';
+            // echo 'heigth: ' . $height . '<br />';
+            // exit;
             $this->width = $this->getDimWidth();
             $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
-    
+
             $this->height = $this->getDimHeight();
             $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
+
+            //check if the photo is vertical(heigth > width)
+            if($height > $width){
+                $onlyName = $this->getFileName($this->current_file_name);
+                $tmp = $this->height;
+                $this->height = $this->width;
+                $this->width = $tmp;
+                $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+                $thumb = imagecreatetruecolor($this->width, $this->height);
+                $source = imagecreatefrompng($file);
+                $source = imagerotate($source, $this->rotation, 0);
+                // Resize
+                imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
+
+                // Output
+                imagepng($thumb, $this->output_directory . $resultLabel, $this->png_quality_compress_lvl);
+                return;
+            }
+
             $onlyName = $this->getFileName($this->current_file_name);
             $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
+
             // Load
             $thumb = imagecreatetruecolor($this->width, $this->height);
             $source = imagecreatefrompng($file);
-    
+            $source = imagerotate($source, $this->rotation, 0);
+            // echo $source;
+            // exit;
+
             // Resize
             imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
-    
+
             // Output
             imagepng($thumb, $this->output_directory . $resultLabel, $this->png_quality_compress_lvl);
-        } catch(Exception $ex) {
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
     }
 
-    private function getDimWidth(){
-        try{
-            if($this->dimension === null){
-               return false;
-            }
-            if(mb_strpos($this->dimension, $this->dimension_separator) < 0){
+    private function getDimWidth()
+    {
+        try {
+            if ($this->dimension === null) {
                 return false;
             }
-    
-            if(gettype($this->dimension) !== 'string'){
+            if (mb_strpos($this->dimension, $this->dimension_separator) < 0) {
+                return false;
+            }
+
+            if (gettype($this->dimension) !== 'string') {
                 $this->errorMsg = 'Dimension must be of type string';
                 $this->throwError();
             }
-    
+
             $widthStr = explode($this->dimension_separator, $this->dimension)[0];
             return intval($widthStr);
-        } catch(Exception $ex){
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
     }
 
-    private function getDimHeight(){
-        try{
-            if($this->dimension === null){
+    private function getDimHeight()
+    {
+        try {
+            if ($this->dimension === null) {
                 return false;
             }
-            if(mb_strpos($this->dimension, $this->dimension_separator) < 0){
+            if (mb_strpos($this->dimension, $this->dimension_separator) < 0) {
                 return false;
             }
-    
-            if(gettype($this->dimension) !== 'string'){
-               return false;
+
+            if (gettype($this->dimension) !== 'string') {
+                return false;
             }
-    
+
             $heightStr = explode($this->dimension_separator, $this->dimension)[1];
             return intval($heightStr);
-        } catch(Exception $ex){
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
     }
 
-     public function setDimension($dimension){
-       try{
-           if($dimension === null){
+    public function setDimension($dimension)
+    {
+        try {
+            if ($dimension === null) {
                 $this->dimension = '800x600';
-           }
-           $this->dimension = $dimension;
-       } catch(Exception $ex){
-           $this->errorMsg = $ex->getMessage();
-           $this->throwError();
-       }
+            }
+            $this->dimension = $dimension;
+        } catch (Exception $ex) {
+            $this->errorMsg = $ex->getMessage();
+            $this->throwError();
+        }
     }
 
-    public function printFileNames(){
+    public function printFileNames()
+    {
         echo "<pre>";
-            print_r($this->file_names);
+        print_r($this->file_names);
         echo "</pre>";
     }
 
-    private function getFileNames(){
-        try{
+    private function getFileNames()
+    {
+        try {
             $fileNames = [];
             foreach (new DirectoryIterator('input/') as $file) {
-              if ($file->isFile()) {
-                  $fileNames[] = $file->getFilename();
+                if ($file->isFile()) {
+                    $fileNames[] = $file->getFilename();
                 }
             }
             return $fileNames;
-
-        } catch(Exception $ex){
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
     }
 
 
-    private function getFileExtension($file){
-        try{
-            if(gettype($file) !== 'string'){
+    private function getFileExtension($file)
+    {
+        try {
+            if (gettype($file) !== 'string') {
                 $this->errorMsg = 'Name of the file must be a string';
                 $this->throwError();
             }
             return explode('.', $file)[1];
-        } catch(Exception $ex){
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
     }
 
-    private function getFileName($file){
-        try{
-            if(gettype($file) !== 'string'){
+    private function getFileName($file)
+    {
+        try {
+            if (gettype($file) !== 'string') {
                 $this->errorMsg = 'Name of the file must be a string';
                 $this->throwError();
             }
             return explode('.', $file)[0];
-
-        } catch(Exception $ex){
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
     }
 
-    private function checkAvailableFiles(){
-        if(count($this->file_names) === 0){
+    private function checkAvailableFiles()
+    {
+        if (count($this->file_names) === 0) {
             return false;
         }
         return true;
     }
 
-      private function processJpgFileByScale(){
-        try{
-            if($this->current_file_name === null || empty($this->current_file_name)){
+    private function processJpgFileByScale()
+    {
+        try {
+            if ($this->current_file_name === null || empty($this->current_file_name)) {
                 $this->errorMsg = 'Invalid file name';
                 $this->throwError();
             }
@@ -269,36 +359,41 @@ class SimplePHPResizer{
             $file = $this->input_directory . $this->current_file_name;
             list($width, $height) = getimagesize($file);
             $this->width = $this->autoscale_factor * $width;
-    
+
             $this->height =  $this->autoscale_factor * $height;
             $onlyName = $this->getFileName($this->current_file_name);
             $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
             // Load
             $thumb = imagecreatetruecolor($this->width, $this->height);
             $source = imagecreatefromjpeg($file);
-    
+
             // Resize
             imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
-    
+
             // Output
             imagejpeg($thumb, $this->output_directory . $resultLabel, $this->quality);
-
-        } catch(Exception $ex){
+        } catch (Exception $ex) {
             $this->errorMsg = $ex->getMessage();
             $this->throwError();
         }
-
     }
 
-    private function throwError(){
+    private function throwError()
+    {
         throw new Exception($this->errorMsg);
     }
 
-    private function setJpgHeader(){
+    private function setJpgHeader()
+    {
         header('Content-Type: image/jpeg');
     }
-    private function setPngHeader(){
+    private function setPngHeader()
+    {
         header('Content-Type: image/png');
+    }
+    private function setTextHeader()
+    {
+        header('Content-Type: text/html');
     }
 }
 
@@ -328,16 +423,16 @@ class SimplePHPResizer{
 // $smallQuality = 20;
 // $resizerS = new SimplePHPResizer('input/', 'output/');
 // $resizerS->resizeJpgByPercent($smallQuality);
-$small = new SimplePHPResizer('input/', 'output/', '815x614');
+$small = new SimplePHPResizer('input/', 'output/', '815x614', 72);
 $small->resizeAll();
 
-$medium = new SimplePHPResizer('input/', 'output/', '1630x1227');
+$medium = new SimplePHPResizer('input/', 'output/', '1630x1227', 72);
 $medium->resizeAll();
 
-$large = new SimplePHPResizer('input/', 'output/', '2751x2072');
+$large = new SimplePHPResizer('input/', 'output/', '2751x2072', 72);
 $large->resizeAll();
 
-$xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832');
+$xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832', 72);
 $xLarge->resizeAll();
 
 //------------------------------------------------------------------------
@@ -378,4 +473,3 @@ $xLarge->resizeAll();
 
 // // Output
 // imagejpeg($thumb, 'output/' . $resultName, 100);
-?>
