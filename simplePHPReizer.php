@@ -35,6 +35,7 @@ class SimplePHPResizer
         $this->height = 0;
         $this->errorMsg = '';
         $this->dimension_separator = 'x';
+        $this->dpi = $dpi;
         $this->rotation = $rotation;
     }
 
@@ -116,24 +117,8 @@ class SimplePHPResizer
                     $height = $imageSizeInfo[1]; 
                     break;     
             }
-            // list($height, $width) = getimagesize($file);
-            //$exif['orientation'] == 6 - vertical image -> height > width
-            //$exif['orientation'] == 1 - horizontal image -> height > width
-            // $imageSizeInfo = getimagesize($file);
-            // $width = $imageSizeInfo[0];
-            // $height = $imageSizeInfo[1];
-            
-            // echo '<pre>';
-            //     // print_r(getimagesize($file));
-            //     print_r($exif['Orientation']);
-            // echo '</pre>';    
-            // echo 'height: ' . $height . '<br />';
-            // echo 'width: ' . $width . '<br />';
-            // exit;
-
             $this->width = $this->getDimWidth();
             $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
-            
             $this->height = $this->getDimHeight();
             $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
 
@@ -145,6 +130,7 @@ class SimplePHPResizer
                 $this->width = $tmp;
                 $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
                 $thumb = imagecreatetruecolor($this->width, $this->height);
+                imageresolution($thumb, $this->dpi, $this->dpi);
                 $source = imagecreatefromjpeg($file);
                 $source = imagerotate($source, $this->rotation, 0);
                 // Resize
@@ -159,6 +145,7 @@ class SimplePHPResizer
             $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
             // Load
             $thumb = imagecreatetruecolor($this->width, $this->height);
+            imageresolution($thumb, $this->dpi, $this->dpi);
             $source = imagecreatefromjpeg($file);
             $source = imagerotate($source, $this->rotation, 0);
             // Resize
@@ -179,15 +166,11 @@ class SimplePHPResizer
                 $this->errorMsg = 'Invalid file name';
                 $this->throwError();
             }         
-            // $this->setPngHeader();
+            $this->setPngHeader();
             $file = $this->input_directory . $this->current_file_name;
             list($width, $height) = getimagesize($file);
-            // echo 'width: ' . $width . '<br />';
-            // echo 'heigth: ' . $height . '<br />';
-            // exit;
             $this->width = $this->getDimWidth();
             $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
-
             $this->height = $this->getDimHeight();
             $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
 
@@ -199,6 +182,7 @@ class SimplePHPResizer
                 $this->width = $tmp;
                 $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
                 $thumb = imagecreatetruecolor($this->width, $this->height);
+                imageresolution($thumb, $this->dpi, $this->dpi);
                 $source = imagecreatefrompng($file);
                 $source = imagerotate($source, $this->rotation, 0);
                 // Resize
@@ -214,11 +198,10 @@ class SimplePHPResizer
 
             // Load
             $thumb = imagecreatetruecolor($this->width, $this->height);
+            imageresolution($thumb, $this->dpi, $this->dpi);
             $source = imagecreatefrompng($file);
             $source = imagerotate($source, $this->rotation, 0);
-            // echo $source;
-            // exit;
-
+            
             // Resize
             imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
 
@@ -423,16 +406,18 @@ class SimplePHPResizer
 // $smallQuality = 20;
 // $resizerS = new SimplePHPResizer('input/', 'output/');
 // $resizerS->resizeJpgByPercent($smallQuality);
+
+
 $small = new SimplePHPResizer('input/', 'output/', '815x614', 72);
 $small->resizeAll();
 
-$medium = new SimplePHPResizer('input/', 'output/', '1630x1227', 72);
+$medium = new SimplePHPResizer('input/', 'output/', '1630x1227', 300);
 $medium->resizeAll();
 
-$large = new SimplePHPResizer('input/', 'output/', '2751x2072', 72);
+$large = new SimplePHPResizer('input/', 'output/', '2751x2072', 300);
 $large->resizeAll();
 
-$xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832', 72);
+$xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832', 300);
 $xLarge->resizeAll();
 
 //------------------------------------------------------------------------
