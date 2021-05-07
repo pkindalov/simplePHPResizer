@@ -1,6 +1,6 @@
 <?php
 
-class SimplePHPResizer
+class SimpleResizer
 {
     private $input_directory;
     private $output_directory;
@@ -408,17 +408,17 @@ class SimplePHPResizer
 // $resizerS->resizeJpgByPercent($smallQuality);
 
 
-$small = new SimplePHPResizer('input/', 'output/', '815x614', 72);
-$small->resizeAll();
+// $small = new SimplePHPResizer('input/', 'output/', '815x614', 72);
+// $small->resizeAll();
 
-$medium = new SimplePHPResizer('input/', 'output/', '1630x1227', 300);
-$medium->resizeAll();
+// $medium = new SimplePHPResizer('input/', 'output/', '1630x1227', 300);
+// $medium->resizeAll();
 
-$large = new SimplePHPResizer('input/', 'output/', '2751x2072', 300);
-$large->resizeAll();
+// $large = new SimplePHPResizer('input/', 'output/', '2751x2072', 300);
+// $large->resizeAll();
 
-$xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832', 300);
-$xLarge->resizeAll();
+// $xLarge = new SimplePHPResizer('input/', 'output/', '4256x2832', 300);
+// $xLarge->resizeAll();
 
 //------------------------------------------------------------------------
 
