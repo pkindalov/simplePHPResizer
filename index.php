@@ -14,5 +14,5 @@ require_once('SimpleArchiver.php');
 // $xLarge = new SimpleResizer('input/', 'output/', '4256x2832', 300);
 // $xLarge->resizeAll();
 
-$archiver = new SimpleArchiver('input/', 'output/', 'bundle');
+$archiver = new SimpleArchiver('output/', 'output/', 'bundle');
 $archiver->zip();

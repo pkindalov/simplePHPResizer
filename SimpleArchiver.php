@@ -9,11 +9,11 @@ class SimpleArchiver
 
     public function __construct($input_dir = 'input/', $output_dir = 'output/', $archive_name = 'bundle')
     {
-        $zip = new ZipArchive();
+        $this->zip = new ZipArchive();
         $this->input_dir = $this->setPath($input_dir);
         $this->output_dir = $this->setPath($output_dir);
         $this->archive_name = $archive_name;
-        $files = new RecursiveIteratorIterator(
+        $this->files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($this->input_dir),
             RecursiveIteratorIterator::LEAVES_ONLY
         );
@@ -22,8 +22,23 @@ class SimpleArchiver
     public function zip()
     {
         try {
-            echo $this->input_dir . '<br />';
-            echo $this->output_dir . '<br />';
+            $this->zip->open($this->output_dir . '/' . $this->archive_name . '.zip', ZipArchive::CREATE | ZipArchive::OVERWRITE);
+            foreach ($this->files as $name => $file) {
+                // Skip directories (they would be added automatically)
+                if (!$file->isDir()) {
+                    // Get real and relative path for current file
+                    $filePath = $file->getRealPath();
+                    $relativePath = substr($filePath, strlen($this->output_dir) + 1);
+
+                    // Add current file to archive
+                    $this->zip->addFile($filePath, $relativePath);
+
+                    // Zip archive will be created only after closing object
+                }
+            }
+            $this->zip->close();
+
+            echo 'archive created successfull';
         } catch (Exception $ex) {
             $this->errThrower($ex->getMessage());
         }
