@@ -32,10 +32,9 @@ class SimpleArchiver
 
                     // Add current file to archive
                     $this->zip->addFile($filePath, $relativePath);
-
-                    // Zip archive will be created only after closing object
                 }
             }
+            // Zip archive will be created only after closing object
             $this->zip->close();
 
             echo 'archive created successfull';

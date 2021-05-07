@@ -103,19 +103,19 @@ class SimpleResizer
             $file = $this->input_directory . $this->current_file_name;
             $exif = exif_read_data($file);
             $imageSizeInfo = getimagesize($file);
-            switch($exif['Orientation']){
+            switch ($exif['Orientation']) {
                 case 1:
                     $width = $imageSizeInfo[0];
                     $height = $imageSizeInfo[1];
-                break;
+                    break;
                 case 6:
                     $width = $imageSizeInfo[1];
                     $height = $imageSizeInfo[0];
                     break;
                 default:
                     $width = $imageSizeInfo[0];
-                    $height = $imageSizeInfo[1]; 
-                    break;     
+                    $height = $imageSizeInfo[1];
+                    break;
             }
             $this->width = $this->getDimWidth();
             $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
@@ -123,7 +123,7 @@ class SimpleResizer
             $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
 
             //check if the photo is vertical(heigth > width)
-            if($height > $width){
+            if ($height > $width) {
                 $onlyName = $this->getFileName($this->current_file_name);
                 $tmp = $this->height;
                 $this->height = $this->width;
@@ -140,7 +140,7 @@ class SimpleResizer
                 imagejpeg($thumb, $this->output_directory . $resultLabel, $this->quality);
                 return;
             }
-            
+
             $onlyName = $this->getFileName($this->current_file_name);
             $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
             // Load
@@ -165,7 +165,7 @@ class SimpleResizer
             if ($this->current_file_name === null || empty($this->current_file_name)) {
                 $this->errorMsg = 'Invalid file name';
                 $this->throwError();
-            }         
+            }
             $this->setPngHeader();
             $file = $this->input_directory . $this->current_file_name;
             list($width, $height) = getimagesize($file);
@@ -175,7 +175,7 @@ class SimpleResizer
             $this->height = empty($this->height) ? $this->autoscale_factor * $height : $this->height;
 
             //check if the photo is vertical(heigth > width)
-            if($height > $width){
+            if ($height > $width) {
                 $onlyName = $this->getFileName($this->current_file_name);
                 $tmp = $this->height;
                 $this->height = $this->width;
@@ -201,7 +201,7 @@ class SimpleResizer
             imageresolution($thumb, $this->dpi, $this->dpi);
             $source = imagecreatefrompng($file);
             $source = imagerotate($source, $this->rotation, 0);
-            
+
             // Resize
             imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
 
