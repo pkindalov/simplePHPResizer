@@ -90,6 +90,8 @@ class SimpleResizer
             }
             $this->processJpgFileByScale();
         }
+            $this->setTextHeader();
+            echo $this->current_file_name . ' resized successfull' . '<br />';
     }
 
     private function processJpgFile()
@@ -103,19 +105,23 @@ class SimpleResizer
             $file = $this->input_directory . $this->current_file_name;
             $exif = exif_read_data($file);
             $imageSizeInfo = getimagesize($file);
-            switch ($exif['Orientation']) {
-                case 1:
-                    $width = $imageSizeInfo[0];
-                    $height = $imageSizeInfo[1];
-                    break;
-                case 6:
-                    $width = $imageSizeInfo[1];
-                    $height = $imageSizeInfo[0];
-                    break;
-                default:
-                    $width = $imageSizeInfo[0];
-                    $height = $imageSizeInfo[1];
-                    break;
+            $width = $imageSizeInfo[0];
+            $height = $imageSizeInfo[1];
+            if(isset($exif['Orientation'])){
+                switch ($exif['Orientation']) {
+                    case 1:
+                        $width = $imageSizeInfo[0];
+                        $height = $imageSizeInfo[1];
+                        break;
+                    case 6:
+                        $width = $imageSizeInfo[1];
+                        $height = $imageSizeInfo[0];
+                        break;
+                    default:
+                        $width = $imageSizeInfo[0];
+                        $height = $imageSizeInfo[1];
+                        break;
+                }
             }
             $this->width = $this->getDimWidth();
             $this->width = empty($this->width) ? $this->autoscale_factor * $width : $this->width;
@@ -340,15 +346,37 @@ class SimpleResizer
             }
             $this->setJpgHeader();
             $file = $this->input_directory . $this->current_file_name;
-            list($width, $height) = getimagesize($file);
-            $this->width = $this->autoscale_factor * $width;
+            $exif = exif_read_data($file);
+            $imageSizeInfo = getimagesize($file);
+            $width = $imageSizeInfo[0];
+            $height = $imageSizeInfo[1];
+            if(isset($exif['Orientation'])){
+                switch ($exif['Orientation']) {
+                    case 1:
+                        $width = $imageSizeInfo[0];
+                        $height = $imageSizeInfo[1];
+                        break;
+                    case 6:
+                        $width = $imageSizeInfo[1];
+                        $height = $imageSizeInfo[0];
+                        break;
+                    default:
+                        $width = $imageSizeInfo[0];
+                        $height = $imageSizeInfo[1];
+                        break;
+                }
+            }
 
+            $this->width = $this->autoscale_factor * $width;
             $this->height =  $this->autoscale_factor * $height;
+
             $onlyName = $this->getFileName($this->current_file_name);
             $resultLabel = $onlyName . '_size_' . $this->width . $this->dimension_separator . $this->height . '.' . $this->file_extension;
             // Load
             $thumb = imagecreatetruecolor($this->width, $this->height);
+            imageresolution($thumb, $this->dpi, $this->dpi);
             $source = imagecreatefromjpeg($file);
+            $source = imagerotate($source, $this->rotation, 0);
 
             // Resize
             imagecopyresized($thumb, $source, 0, 0, 0, 0, $this->width, $this->height, $width, $height);
